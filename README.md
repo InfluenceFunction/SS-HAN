@@ -1,6 +1,6 @@
 # SS-HAN
 
-This Repository is modified according to the HAN model(https://github.com/Jhy1993/HAN), We use a two-stage self-supervised learning method to complete the task of heterogeneous graph networks and named the new model as SS-HAN
+This Repository is modified according to the HAN model(https://github.com/Jhy1993/HAN), We use a two-stage self-supervised learning method to complete the task of heterogeneous graph networks and named the new model as SS-HAN, The repository is still being updated
 
 # Requirements
 - python >= 3.6
