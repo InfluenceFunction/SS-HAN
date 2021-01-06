@@ -9,7 +9,7 @@ This Repository is modified according to the HAN model, the original copy in htt
 - sklearn
 
 # Dataset
-the ACM raw data, the preprocessing process you can refer to https://github.com/dmlc/dgl/blob/master/examples/pytorch/han/utils.py and https://github.com/seongjunyun/Graph_Transformer_Networks/blob/master/Data_Preprocessing.ipynb(we exacted it to ours ACM_preprocessing.py)
+the ACM raw data, the preprocessing process you can refer to https://github.com/dmlc/dgl/blob/master/examples/pytorch/han/utils.py and https://github.com/seongjunyun/Graph_Transformer_Networks/blob/master/Data_Preprocessing.ipynb (we exacted it to ours ACM_preprocessing.py)
 
 # Run
 python main.py
