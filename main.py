@@ -1,5 +1,6 @@
 import os
 import torch
+import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from sklearn.metrics import f1_score
@@ -19,10 +20,12 @@ def score(logits, labels):
 
     return accuracy, micro_f1, macro_f1
 
-def evaluate(model, g, features, labels, mask, loss_func):
+def evaluate(model, classifier, g, features, labels, mask, loss_func):
     model.eval()
+    classifier.eval()
     with torch.no_grad():
-        logits = model(g, features)
+        embeddings = model(g, features)
+        logits = classifier(embeddings[0])
     loss = loss_func(logits[mask], labels[mask])
     accuracy, micro_f1, macro_f1 = score(logits[mask], labels[mask])
 
@@ -82,6 +85,7 @@ def main(args):
                                  weight_decay=args['weight_decay'])
     # lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.95)
 
+    print('*****************************Pre-training Starting*************************************')
     for epoch in range(args['pretrain_epochs']):
         model.train()
 
@@ -98,11 +102,57 @@ def main(args):
             loss.backward()
             optimizer.step()
 
-            print('link_labels : {}'.format(link_labels))
-            print('link_probs : {}'.format(link_probs))
+            # print('link_labels : {}'.format(link_labels))
+            # print('link_probs : {}'.format(link_probs))
             print('epoch: {} || batch_size : {} || loss: {} || accuracy: {}'.format(epoch, idx, loss, acc))
-
         # lr_scheduler.step()
+        early_stop = stopper.step(model, epoch, loss.item(), acc)
+        if early_stop:
+            break
+    filename = './model/ss-han_{}_{:02f}_{:02f}'.format(epoch, loss, acc)
+    torch.save(model.state_dict(), filename)
+
+    print('*****************************Pre-training Ending*************************************')
+    print('\n')
+    print('*****************************Fine-tuning Starting*************************************')
+
+    # freeze the pretrained parameter
+    for parms in model.parameters():
+        parms.requires_grad = False
+
+    from model_hetero import Classifier
+    classifier = Classifier(in_size=args['hidden_units']*args['num_heads'][-1],
+                            hidden_size=128,
+                            out_size=num_classes)
+
+    loss_fcn = torch.nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(classifier.parameters(), lr=args['lr'],
+                                 weight_decay=args['weight_decay'])
+
+    for epoch in range(args['fine-tuning_epochs']):
+        model.train()
+
+        embeddings = model(g, features)
+        output = classifier(embeddings[0])
+        loss = loss_fcn(output[train_mask], labels[train_mask])
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        train_acc, train_micro_f1, train_macro_f1 = score(output[train_mask], labels[train_mask])
+        val_loss, val_acc, val_micro_f1, val_macro_f1 \
+            = evaluate(model, classifier, g, features, labels, val_mask, loss_fcn)
+        print('Epoch {:d} | Train Loss {:.4f} | Train Micro f1 {:.4f} | Train Macro f1 {:.4f} | '
+              'Val Loss {:.4f} | Val Micro f1 {:.4f} | Val Macro f1 {:.4f}'.format(
+            epoch + 1, loss.item(), train_micro_f1, train_macro_f1, val_loss.item(), val_micro_f1, val_macro_f1))
+
+    print('*****************************Fine-tuning Ending*************************************')
+
+    test_loss, test_acc, test_micro_f1, test_macro_f1 \
+        = evaluate(model, classifier, g, features, labels, val_mask, loss_fcn)
+    print('Test loss {:.4f} | Test Micro f1 {:.4f} | Test Macro f1 {:.4f}'.format(
+        test_loss.item(), test_micro_f1, test_macro_f1))
 
 
 if __name__ == '__main__':

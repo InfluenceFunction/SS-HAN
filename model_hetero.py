@@ -126,3 +126,19 @@ class SS_HAN(nn.Module):
         z = torch.cat(embeddings, dim=0)
         logits = (z[edge_index[0]] * z[edge_index[1]]).sum(dim=-1)
         return logits
+
+class Classifier(nn.Module):
+    def __init__(self, in_size, hidden_size, out_size):
+        super(Classifier, self).__init__()
+
+        self.hidden_layer = nn.Linear(in_size, hidden_size)
+        self.output_layer = nn.Linear(hidden_size, out_size)
+
+    def forward(self, x):
+
+        x = self.hidden_layer(x)
+        x = F.relu(x)
+        x = F.dropout(x)
+        x = self.output_layer(x)
+
+        return x

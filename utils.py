@@ -89,9 +89,9 @@ default_configure = {
     'dropout': 0.6,
     'weight_decay': 0.001,
     'pretrain_epochs': 200,
-    'fine-tuning_epochs' : 1,
+    'fine-tuning_epochs' : 100,
     'batch_size' : 1,
-    'patience': 100
+    'patience': 10
 }
 
 sampling_configure = {
@@ -302,27 +302,29 @@ class EarlyStopping(object):
         self.best_loss = None
         self.early_stop = False
 
-    def step(self, loss, acc, model):
+    def step(self, model, epoch, loss, acc):
         if self.best_loss is None:
             self.best_acc = acc
             self.best_loss = loss
-            self.save_checkpoint(model)
+            # self.save_checkpoint(model)
         elif (loss > self.best_loss) and (acc < self.best_acc):
             self.counter += 1
             print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
             if self.counter >= self.patience:
+                self.save_checkpoint(model, epoch, loss, acc)
                 self.early_stop = True
         else:
-            if (loss <= self.best_loss) and (acc >= self.best_acc):
-                self.save_checkpoint(model)
+            # if (loss <= self.best_loss) and (acc >= self.best_acc):
+            #     self.save_checkpoint(model)
             self.best_loss = np.min((loss, self.best_loss))
             self.best_acc = np.max((acc, self.best_acc))
             self.counter = 0
         return self.early_stop
 
-    def save_checkpoint(self, model):
+    def save_checkpoint(self, model, epoch, loss, acc):
         """Saves model when validation loss decreases."""
-        torch.save(model.state_dict(), self.filename)
+        filename = './model/ss-han_{}_{:02f}_{:02f}'.format(epoch, loss, acc)
+        torch.save(model.state_dict(), filename)
 
     def load_checkpoint(self, model):
         """Load the latest checkpoint."""
